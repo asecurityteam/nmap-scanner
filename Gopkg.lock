@@ -168,12 +168,12 @@
   version = "v0.1.0"
 
 [[projects]]
-  branch = "add-null"
   digest = "1:60fa163427dd9801b5dc7b6f188c0eeb20d65fe94491a97b9c1e9790e427926d"
   name = "github.com/asecurityteam/component-producer"
   packages = ["."]
   pruneopts = "UT"
-  revision = "2e1555f0704b85b381134004b4c5b89177216394"
+  revision = "d12d8033cbbd372ce8e5948ef672bbc385852035"
+  version = "v0.3.0"
 
 [[projects]]
   digest = "1:79c187e5b848602e1ab00b6bf1bc4b36b30b580cf3050590da6437caaffe6ec9"
@@ -211,28 +211,28 @@
   version = "1.0.4"
 
 [[projects]]
-  branch = "master"
   digest = "1:07e44ec48d802cb92f337bfd3312aaced8d915a9934b60328f56a027c94138b7"
   name = "github.com/asecurityteam/runhttp"
   packages = ["."]
   pruneopts = "UT"
   revision = "d57832e45684af266e155f7d068b1212cb6e7eda"
+  version = "v0.2.0"
 
 [[projects]]
-  branch = "fix-components"
-  digest = "1:09963fe65caf263c077f0de3230e8f1cd89ffce2b299a9be0d990918bc22e830"
+  digest = "1:a6062fd35f5a3e0fcb48b365f343f6cd87991e039510bedf4a30007ec2f436dc"
   name = "github.com/asecurityteam/serverfull"
   packages = ["."]
   pruneopts = "UT"
-  revision = "cf2b42833718d7c7cffc22383b13fbf3cf14943a"
+  revision = "b2396b0e00cb1a57eb4f78b468ff9cf80d14e2c0"
+  version = "v0.4.0"
 
 [[projects]]
-  branch = "master"
   digest = "1:391bbf4e67d50d74c1bb7dfad79222181327ff6d9a32324ed022b12051b5d5e8"
   name = "github.com/asecurityteam/settings"
   packages = ["."]
   pruneopts = "UT"
   revision = "d4142d59861b3779aeba32111096d43ae940e49d"
+  version = "v0.1.0"
 
 [[projects]]
   digest = "1:067d27a5520b7ab98a652f32b33785de2ffc7028e50c722c993e7ee218046a30"
@@ -1069,7 +1069,7 @@
     "protobuf/field_mask",
   ]
   pruneopts = "UT"
-  revision = "8a5ba248b8588b16ab85da76bc8f9fe43a32a76d"
+  revision = "eb59cef1c072c61ea4f7623910448d5e9c6a4455"
 
 [[projects]]
   digest = "1:9db2e6e9d0d0a6580f01a242d30e895efd65b57ed923f50ea37667a6c09665bd"
@@ -1163,7 +1163,10 @@
     "github.com/asecurityteam/runhttp",
     "github.com/asecurityteam/serverfull",
     "github.com/asecurityteam/settings",
+    "github.com/aws/aws-sdk-go/aws",
+    "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/dynamodb",
+    "github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute",
     "github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface",
     "github.com/google/uuid",
   ]

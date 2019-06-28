@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/asecurityteam/nmap-scanner/pkg/domain"
@@ -17,6 +18,7 @@ const (
 	dataKey             = "data"
 	marker              = "OK"
 	defaultPartitionKey = "identity"
+	deafultTTLKey       = "ttl"
 	defaultTableName    = "ScanResults"
 )
 
@@ -75,6 +77,7 @@ type DynamoDB struct {
 	Client           dynamodbiface.DynamoDBAPI
 	TableName        string
 	PartitionKeyName string
+	TTLKeyName       string
 }
 
 // Mark the identifier as in-progress.
@@ -87,6 +90,9 @@ func (s *DynamoDB) Mark(ctx context.Context, identifier string) error {
 			},
 			dataKey: {
 				S: aws.String(marker),
+			},
+			s.TTLKeyName: {
+				N: aws.String(fmt.Sprintf("%d", time.Now().Add(time.Hour).Unix())),
 			},
 		},
 	})
@@ -104,6 +110,9 @@ func (s *DynamoDB) Set(ctx context.Context, identifier string, finding domain.Fi
 			},
 			dataKey: {
 				S: aws.String(string(b)),
+			},
+			s.TTLKeyName: {
+				N: aws.String(fmt.Sprintf("%d", time.Now().Add(time.Hour).Unix())),
 			},
 		},
 	})
@@ -157,6 +166,7 @@ func (s *DynamoDB) Load(ctx context.Context, identifier string) (domain.Finding,
 type DynamoConfig struct {
 	TableName    string `description:"The name of the DynamoDB table to use."`
 	PartitionKey string `description:"Name of the table partition key."`
+	TTLKey       string `description:"Name of the TTL key."`
 	Region       string `description:"AWS region in which the table is provisioned."`
 	Endpoint     string `descriptions:"DynamoDB endpoint to use for requests."`
 }
@@ -179,6 +189,7 @@ func (*DynamoComponent) Settings() *DynamoConfig {
 	return &DynamoConfig{
 		TableName:    defaultTableName,
 		PartitionKey: defaultPartitionKey,
+		TTLKey:       deafultTTLKey,
 	}
 }
 
@@ -197,5 +208,6 @@ func (*DynamoComponent) New(ctx context.Context, conf *DynamoConfig) (domain.Sto
 		Client:           client,
 		TableName:        conf.TableName,
 		PartitionKeyName: conf.PartitionKey,
+		TTLKeyName:       conf.TTLKey,
 	}, nil
 }
