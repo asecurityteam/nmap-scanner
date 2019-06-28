@@ -1,0 +1,15 @@
+language: go
+sudo: false
+go:
+- 1.11.x
+services:
+  - docker
+install:
+  - chmod 777 -R "$(pwd)"
+  - make dep
+script:
+  - make lint
+  - make test
+  - make integration
+  - make coverage
+  - bash <(curl -s https://codecov.io/bash) -f .coverage/combined.cover.out
