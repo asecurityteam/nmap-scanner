@@ -1,0 +1,234 @@
+openapi: 3.0.0
+x-runtime:
+  httpserver:
+    address: ":8080"
+  logger:
+    level: "INFO"
+    output: "STDOUT"
+  stats:
+    output: "NULL"
+  signals:
+    installed:
+      - "OS"
+    os:
+      signals:
+        - 2 # SIGINT
+        - 15 # SIGTERM
+  connstate:
+    reportinterval: "5s"
+    hijackedcounter: "http.server.connstate.hijacked"
+    closedcounter: "http.server.connstate.closed"
+    idlegauge: "http.server.connstate.idle.gauge"
+    idlecounter: "http.server.connstate.idle"
+    activegauge: "http.server.connstate.active.gauge"
+    activecounter: "http.server.connstate.active"
+    newgauge: "http.server.connstate.new.gauge"
+    newcounter: "http.server.connstate.new"
+x-transportd:
+  backends:
+    - app
+  app:
+    host: http://app:8081
+    pool:
+      ttl: "24h"
+      count: 1
+info:
+  version: 1.0.0
+  title: "nmap-scanner"
+  description: "A service that runs nmap scripts"
+  contact:
+    name: Security Development
+    email: secdev-external@atlassian.com
+  license:
+    name: Apache 2.0
+    url: 'https://www.apache.org/licenses/LICENSE-2.0.html'
+paths:
+  /healthcheck:
+    get:
+      description: "Liveness check."
+      responses:
+        "200":
+          description: "Success."
+      x-transportd:
+        backend: app
+  /scan:
+    post:
+      description: Scan a host
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanRequest'
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Finding'
+        "400":
+          description: "Invalid input"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      x-transportd:
+        backend: app
+        enabled:
+          - "accesslog"
+          - "requestvalidation"
+          - "responsevalidation"
+          - "lambda"
+        lambda:
+          arn: "scan"
+          async: false
+          request: '#! json .Request.Body !#'
+          success: '{"status": 200, "bodyPassthrough": true}'
+          error: '{"status": 400, "bodyPassthrough": true}'
+  /results/{resultId}:
+    get:
+      description: Check the results of a job
+      parameters:
+        - name: "resultId"
+          in: "path"
+          description: "The identifier of the job to check"
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: "The job is in progress"
+        "200":
+          description: "The job is complete"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Finding'
+      x-transportd:
+        backend: app
+        enabled:
+          - "accesslog"
+          - "requestvalidation"
+          - "responsevalidation"
+          - "lambda"
+        lambda:
+          arn: "results"
+          async: false
+          request: '{"id": "#! .Request.URL.resultId !#"}'
+          success: '#! if eq .Response.Body.status "IN_PROGRESS" !#{"status":204}#! else if eq .Response.Body.status "UNKNOWN"!#{"status":404}#! else if eq .Response.Body.status "READY"!#{"status":200,"body":#! json .Response.Body.Finding !#}#! end !#'
+          error: '{"status": 500, "bodyPassthrough": true}'
+  /schedule:
+    post:
+      description: Schedule a host to be scanned
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanRequest'
+      responses:
+        "202":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanScheduleResponse'
+        "400":
+          description: "Invalid input"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      x-transportd:
+        backend: app
+        enabled:
+          - "accesslog"
+          - "requestvalidation"
+          - "responsevalidation"
+          - "lambda"
+        lambda:
+          arn: "schedule"
+          async: false
+          request: '#! json .Request.Body !#'
+          success: '{"status": 200, "bodyPassthrough": true}'
+          error: '{"status": 400, "bodyPassthrough": true}'
+components:
+  schemas:
+    Finding:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          description: The time at which the scan was performed.
+        ip:
+          type: string
+          description: The IP address scanned
+        hostnames:
+          type: array
+          items:
+            type: string
+          description: Any known hostnames associated with the IP
+        vulnerabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Vulnerability'
+    Vulnerability:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The ID of the vulnerability. Most often a CVE number
+        description:
+          type: string
+          description: A description of the vulnerability
+        product:
+          type: string
+          description: The name of the vulnerable product
+        productVersion:
+          type: string
+          description: The detected version of the vulnerable product
+        link:
+          type: string
+          description: HREF to the vuln DB entry for the vulnerability
+        source:
+          type: string
+          description: The name of the script that detected the vulnerability
+        port:
+          type: integer
+          description: The port on which the vulnerability was detected
+        protocol:
+          type: string
+          description: The networking protocol used during scanning
+        service:
+          type: string
+          description: The category of system listening on the vulnerable port
+    ScanRequest:
+      type: object
+      properties:
+        host:
+          type: string
+          description: The hostname or IP to scan.
+    ScanScheduleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: A unique identifier for the job.
+        href:
+          type: string
+          description: The URL to poll for status.
+    Error:
+      type: object
+      properties:
+        errorMessage:
+          type: string
+          description: The error message.
+        errorType:
+          type: string
+          description: The error type.
+        stackTrace:
+          type: array
+          description: The stack trace output, if any.
+          items:
+            type: string
