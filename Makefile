@@ -25,10 +25,14 @@ test:
         asecurityteam/sdcli:v1 go test
 
 integration:
-	docker run -ti \
-        --mount src="$(DIR)",target="/go/src/$(PROJECT_PATH)",type="bind" \
-        -w "/go/src/$(PROJECT_PATH)" \
-        asecurityteam/sdcli:v1 go integration
+	DIR=$(DIR) \
+	PROJECT_PATH=/go/src/$(PROJECT_PATH) \
+	docker-compose \
+		-f docker-compose.it.yml \
+		up \
+			--abort-on-container-exit \
+			--build \
+			--exit-code-from test
 
 coverage:
 	docker run -ti \
@@ -48,3 +52,5 @@ run:
 deploy-dev: ;
 
 deploy: ;
+
+print-%  : ; @echo $* = $($*)
