@@ -1,0 +1,26 @@
+version: '3'
+services:
+  test:
+    image: asecurityteam/sdcli:v1
+    environment:
+      # config values for integration tests
+      DYNAMO_TABLE_NAME: results
+      DYNAMO_TABLE_PARTITIONKEY: partitionkey
+      DYNAMO_TABLE_TTLKEY: ttl
+      DYNAMO_TABLE_REGION: us-east-1
+      DYNAMO_TABLE_ENDPOINT: http://localstack:4569
+      # required for aws sdk
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    command: go integration
+    working_dir: ${PROJECT_PATH}
+    volumes:
+      - ${DIR}:${PROJECT_PATH}
+    depends_on:
+      - localstack
+  localstack:
+    image: localstack/localstack
+    environment:
+      - LOCALSTACK_SERVICES=dynamodb
+    volumes:
+      - "${TMPDIR:-/tmp/localstack}:/tmp/localstack"
