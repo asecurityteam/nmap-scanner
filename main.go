@@ -39,7 +39,7 @@ type config struct {
 	WorkProducer    *workConfig
 	ResultsURL      string `description:"The base URL path on which results will be available."`
 	LambdaMode      bool   `description:"Use the Lambda SDK to start the system."`
-	LambdaFunction  string `descriptin:"Name of the function to host in Lambda mode."`
+	LambdaFunction  string `description:"Name of the function to host in Lambda mode."`
 }
 
 func (*config) Name() string {
