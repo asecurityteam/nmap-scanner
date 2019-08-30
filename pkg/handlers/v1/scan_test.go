@@ -92,7 +92,7 @@ func TestScanSuccess(t *testing.T) {
 			},
 		},
 	}
-	expected := []ScanFinding{
+	expected := ScanOutput{Findings: []ScanFinding{
 		{
 			Timestamp: ts,
 			IP:        "127.0.0.1",
@@ -125,7 +125,7 @@ func TestScanSuccess(t *testing.T) {
 				},
 			},
 		},
-	}
+	}}
 
 	s.EXPECT().Scan(ctx, in.Host).Return(found, nil)
 	p.EXPECT().Produce(ctx, expected).Return(expected, nil)

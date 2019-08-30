@@ -90,7 +90,7 @@ paths:
           arn: "scan"
           async: false
           request: '#! json .Request.Body !#'
-          success: '{"status": 200, "body": {"findings": #! json .Response.Body !#}}'
+          success: '{"status": 200, "body": {"findings": #! json .Response.Body.findings !#}}'
           error: >
             #! if eq .Response.Body.errorType "NotFoundError" !#
             {"status": 404, "bodyPassthrough": true}
