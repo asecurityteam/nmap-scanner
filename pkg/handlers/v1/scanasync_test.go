@@ -268,4 +268,11 @@ func TestScanAsync(t *testing.T) {
 	p.EXPECT().Produce(ctx, expected).Return(expected, nil)
 	_, err = h.Handle(ctx, in)
 	require.Nil(t, err)
+
+	s.EXPECT().Scan(ctx, in.Host).Return(nil, domain.MissingScanTargetError{Target: in.Host})
+	st.EXPECT().Set(ctx, id, gomock.Any()).Return(nil)
+	p.EXPECT().Produce(ctx, gomock.Any()).Return([]domain.Finding{}, nil)
+	f, err := h.Handle(ctx, in)
+	require.Nil(t, err)
+	require.Equal(t, []domain.Finding{}, f)
 }

@@ -157,7 +157,12 @@ func (h *Scan) handle(ctx context.Context, in ScanInput) ([]ScanFinding, error) 
 // Handle is invoked on each request.
 func (h *Scan) Handle(ctx context.Context, in ScanInput) (interface{}, error) {
 	v, err := h.handle(ctx, in)
-	if err != nil {
+	switch err.(type) {
+	case nil:
+		break
+	case domain.MissingScanTargetError:
+		return nil, domain.NotFoundError{Identifier: in.Host}
+	default:
 		h.LogFn(ctx).Error(logs.ScanFailed{Reason: err.Error(), TargetHost: in.Host})
 		return nil, err
 	}
