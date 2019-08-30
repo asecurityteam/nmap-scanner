@@ -22,11 +22,11 @@ func TestNMAPCommandFailure(t *testing.T) {
 	cm := NewMockCommandMaker(ctrl)
 	cr := NewMockCommandRunner(ctrl)
 
-	n := NewNMAP("yes", []string{"one", "two"}, []string{"k=v"})
+	n := NewNMAP("yes", []string{"-v"}, []string{"one", "two"}, []string{"k=v"})
 	n.CommandMaker = cm
 	ctx := context.Background()
 	strFlags := strings.Split(
-		"-sV -oX - --script one,two --script-args k=v 127.0.0.1",
+		"-sV -oX - -v --script one,two --script-args k=v 127.0.0.1",
 		" ",
 	)
 	// Convert the []string to []interface{} for gomock.
@@ -47,11 +47,11 @@ func TestNMAPInvalidXMLOutput(t *testing.T) {
 	cm := NewMockCommandMaker(ctrl)
 	cr := NewMockCommandRunner(ctrl)
 
-	n := NewNMAP("yes", []string{"one", "two"}, []string{"k=v"})
+	n := NewNMAP("yes", []string{"-v"}, []string{"one", "two"}, []string{"k=v"})
 	n.CommandMaker = cm
 	ctx := context.Background()
 	strFlags := strings.Split(
-		"-sV -oX - --script one,two --script-args k=v 127.0.0.1",
+		"-sV -oX - -v --script one,two --script-args k=v 127.0.0.1",
 		" ",
 	)
 	// Convert the []string to []interface{} for gomock.
@@ -74,11 +74,11 @@ func TestNMAPMissingHost(t *testing.T) {
 	cm := NewMockCommandMaker(ctrl)
 	cr := NewMockCommandRunner(ctrl)
 
-	n := NewNMAP("yes", []string{"one", "two"}, []string{"k=v"})
+	n := NewNMAP("yes", []string{"-v"}, []string{"one", "two"}, []string{"k=v"})
 	n.CommandMaker = cm
 	ctx := context.Background()
 	strFlags := strings.Split(
-		"-sV -oX - --script one,two --script-args k=v 127.0.0.1",
+		"-sV -oX - -v --script one,two --script-args k=v 127.0.0.1",
 		" ",
 	)
 	// Convert the []string to []interface{} for gomock.
@@ -102,11 +102,11 @@ func TestNMAPSuccess(t *testing.T) {
 	cm := NewMockCommandMaker(ctrl)
 	cr := NewMockCommandRunner(ctrl)
 
-	n := NewNMAP("yes", []string{"one", "two"}, []string{"k=v"})
+	n := NewNMAP("yes", []string{"-v"}, []string{"one", "two"}, []string{"k=v"})
 	n.CommandMaker = cm
 	ctx := context.Background()
 	strFlags := strings.Split(
-		"-sV -oX - --script one,two --script-args k=v 127.0.0.1",
+		"-sV -oX - -v --script one,two --script-args k=v 127.0.0.1",
 		" ",
 	)
 	expectedResults := []domain.Finding{domain.Finding{
