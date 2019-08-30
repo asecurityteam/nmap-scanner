@@ -89,10 +89,10 @@ func vulnerabilityFromDomain(source domain.Vulnerability) vulnerability {
 		Scores:         make([]vulnerabilityScore, 0, len(source.Scores)),
 		Description:    source.Description,
 		Dates:          make([]vulnerabilityDate, 0, len(source.Dates)),
-		CheckResults:   source.CheckResults,
-		ExploitResults: source.ExploitResults,
-		ExtraInfo:      source.ExtraInfo,
-		References:     source.References,
+		CheckResults:   make([]string, 0, len(source.CheckResults)),
+		ExploitResults: make([]string, 0, len(source.ExploitResults)),
+		ExtraInfo:      make([]string, 0, len(source.ExtraInfo)),
+		References:     make([]string, 0, len(source.References)),
 		Source:         source.Source,
 		Port:           source.Port,
 		Protocol:       source.Protocol,
@@ -107,6 +107,10 @@ func vulnerabilityFromDomain(source domain.Vulnerability) vulnerability {
 	for _, date := range source.Dates {
 		v.Dates = append(v.Dates, vulnerabilityDate(date))
 	}
+	v.CheckResults = append(v.CheckResults, source.CheckResults...)
+	v.ExploitResults = append(v.ExploitResults, source.ExploitResults...)
+	v.ExtraInfo = append(v.ExtraInfo, source.ExtraInfo...)
+	v.References = append(v.References, source.References...)
 
 	return v
 }

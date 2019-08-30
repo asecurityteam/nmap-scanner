@@ -10,7 +10,9 @@ import (
 
 // ScanInput is a container for the JSON request body.
 type ScanInput struct {
-	Host string `json:"host"`
+	Host       string   `json:"host"`
+	Scripts    []string `json:"scripts"`
+	ScriptArgs []string `json:"scripts_args"`
 }
 
 // ScanVulnerability is a JSON domain.Vulnerability.
@@ -144,15 +146,24 @@ func fromDomain(source []domain.Finding) []ScanFinding {
 	return r
 }
 
-// Scan is a handler that manages scanning a host on-deman.
+// Scan is a handler that manages scanning a host on-demand.
 type Scan struct {
-	LogFn    domain.LogFn
-	Scanner  domain.Scanner
-	Producer domain.Producer
+	LogFn           domain.LogFn
+	Scanner         domain.Scanner
+	ScriptedScanner domain.ScriptedScanner
+	Producer        domain.Producer
 }
 
-func (h *Scan) handle(ctx context.Context, in ScanInput) (ScanOutput, error) {
+func (h *Scan) handleScan(ctx context.Context, in ScanInput) (ScanOutput, error) {
 	findings, err := h.Scanner.Scan(ctx, in.Host)
+	if err != nil {
+		return ScanOutput{}, err
+	}
+	return ScanOutput{Findings: fromDomain(findings)}, nil
+}
+
+func (h *Scan) handleScriptScan(ctx context.Context, in ScanInput) (ScanOutput, error) {
+	findings, err := h.ScriptedScanner.ScanWithScripts(ctx, in.Scripts, in.ScriptArgs, in.Host)
 	if err != nil {
 		return ScanOutput{}, err
 	}
@@ -161,7 +172,11 @@ func (h *Scan) handle(ctx context.Context, in ScanInput) (ScanOutput, error) {
 
 // Handle is invoked on each request.
 func (h *Scan) Handle(ctx context.Context, in ScanInput) (interface{}, error) {
-	v, err := h.handle(ctx, in)
+	handler := h.handleScan
+	if len(in.Scripts) > 0 || len(in.ScriptArgs) > 0 {
+		handler = h.handleScriptScan
+	}
+	v, err := handler(ctx, in)
 	switch err.(type) {
 	case nil:
 		break

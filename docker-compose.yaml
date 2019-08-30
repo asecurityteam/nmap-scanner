@@ -6,9 +6,7 @@ services:
       dockerfile: Dockerfile
     environment:
       NMAPSCANNER_LAMBDAMODE: "false"
-      NMAPSCANNER_LAMBDAFUNCTION:
-      NMAPSCANNER_SCANNER_SCRIPTS: "http-* ssl-* vulscan/vulscan.nse"
-      NMAPSCANNER_SCANNER_SCRIPTARGS: "vulscanoutput='{id} | {title} | {product} | {version} | {link}\n' vulns.showall=on"
+      NMAPSCANNER_LAMBDAFUNCTION: "scan"
       NMAPSCANNER_SCANNER_BINARGS: "-T5"
       NMAPSCANNER_RESULTSURL: "http://localhost/results"
       NMAPSCANNER_STORE_TYPE: "MEMORY"

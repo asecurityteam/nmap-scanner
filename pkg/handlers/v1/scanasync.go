@@ -71,15 +71,22 @@ type AsyncScanOutput struct {
 
 // ScanAsync manages processing async reuquests.
 type ScanAsync struct {
-	LogFn    domain.LogFn
-	Store    domain.Store
-	Scanner  domain.Scanner
-	Producer domain.Producer
+	LogFn           domain.LogFn
+	Store           domain.Store
+	Scanner         domain.Scanner
+	ScriptedScanner domain.ScriptedScanner
+	Producer        domain.Producer
 }
 
 // Handle process the async job.
 func (h *ScanAsync) Handle(ctx context.Context, in AsyncScanInput) (interface{}, error) {
-	findings, err := h.Scanner.Scan(ctx, in.Host)
+	fn := h.Scanner.Scan
+	if len(in.Scripts) > 0 || len(in.ScriptArgs) > 0 {
+		fn = func(ctx context.Context, host string) ([]domain.Finding, error) {
+			return h.ScriptedScanner.ScanWithScripts(ctx, in.Scripts, in.ScriptArgs, host)
+		}
+	}
+	findings, err := fn(ctx, in.Host)
 	switch err.(type) {
 	case nil:
 		break
