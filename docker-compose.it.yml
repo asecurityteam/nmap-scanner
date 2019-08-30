@@ -13,9 +13,9 @@ services:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
     command: go integration
-    working_dir: ${PROJECT_PATH}
+    working_dir: ${DIR}
     volumes:
-      - ${DIR}:${PROJECT_PATH}
+      - ${DIR}:${DIR}
     depends_on:
       - localstack
   localstack:
