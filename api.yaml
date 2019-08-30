@@ -201,7 +201,7 @@ components:
         state:
           type: string
           description: >
-            An indicator of how whether the scanned system(s) are
+            An indicator of whether the scanned system(s) are
             vulnerable to this known vulnerability. Possible values
             are:
 
