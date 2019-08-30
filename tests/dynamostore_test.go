@@ -85,7 +85,18 @@ func TestDynamoStore(t *testing.T) {
 	require.IsType(t, domain.InProgressError{}, err, err.Error())
 
 	expected := []domain.Finding{
-		{Timestamp: time.Now().UTC(), Vulnerabilities: []domain.Vulnerability{}},
+		{
+			Timestamp: time.Now().UTC(),
+			Vulnerabilities: []domain.Vulnerability{
+				domain.Vulnerability{
+					Key:    "TESTVULN",
+					State:  domain.VulnStateNot,
+					IDs:    []domain.VulnerabilityID{},
+					Scores: []domain.VulnerabilityScore{},
+					Dates:  []domain.VulnerabilityDate{},
+				},
+			},
+		},
 	}
 	err = s.Set(ctx, id, expected)
 	require.Nil(t, err)
