@@ -65,6 +65,8 @@ the configuration options for the system:
 ```bash
 # (bool) Use the Lambda SDK to start the system.
 NMAPSCANNER_LAMBDAMODE="false"
+# (string) Name of the function to host in Lambda mode.
+NMAPSCANNER_LAMBDAFUNCTION="scan"
 # (string) The base URL path on which results will be available.
 NMAPSCANNER_RESULTSURL=""
 # ([]string) Any script arguments to inject. Form of argname='argvalue'
