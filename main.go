@@ -39,8 +39,7 @@ type config struct {
 	WorkProducer    *workConfig
 	ResultsURL      string `description:"The base URL path on which results will be available."`
 	LambdaMode      bool   `description:"Use the Lambda SDK to start the system."`
-	// TODO: POC of this in lambda using subproc execution and static bundling
-	// of needed binary files to run nmap.
+	LambdaFunction  string `description:"Name of the function to host in Lambda mode."`
 }
 
 func (*config) Name() string {
@@ -122,7 +121,7 @@ func (c *component) New(ctx context.Context, conf *config) (func(context.Context
 	fetcher := &serverfull.StaticFetcher{Functions: handlers}
 	if conf.LambdaMode {
 		return func(ctx context.Context, source settings.Source) error {
-			return serverfull.StartLambda(ctx, source, fetcher, "filter")
+			return serverfull.StartLambda(ctx, source, fetcher, conf.LambdaFunction)
 		}, nil
 	}
 	return func(ctx context.Context, source settings.Source) error {

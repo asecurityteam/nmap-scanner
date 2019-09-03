@@ -122,17 +122,21 @@ type NMAP struct {
 }
 
 // NewNMAP generates a Scanner implementation tha leverages NMAP internally.
-func NewNMAP(binPath string, scripts []string, scriptArgs []string) *NMAP {
-	strs := []string{
+func NewNMAP(binPath string, binArgs []string, scripts []string, scriptArgs []string) *NMAP {
+	strs := make([]string, 0, 6+len(binArgs)+len(scriptArgs))
+	strs = append(
+		strs,
 		binPath,
 		`-sV`,      // Enable version detection of systems.
 		`-oX`, `-`, // Enable XML output mode and send to stdout.
-		`--script`, strings.Join(scripts, ","), // Configure enabled scripts,
+	)
+	strs = append(strs, binArgs...)
+	if len(scripts) > 0 {
+		strs = append(strs, `--script`, strings.Join(scripts, ","))
 	}
 	if len(scriptArgs) > 0 {
 		// Optionally pass in script args if present.
-		strs = append(strs, `--script-args`)
-		strs = append(strs, strings.Join(scriptArgs, ","))
+		strs = append(strs, `--script-args`, strings.Join(scriptArgs, ","))
 	}
 	return &NMAP{
 		CommandStrings: strs,
@@ -331,6 +335,7 @@ func parseVulscan(raw string) []domain.Vulnerability {
 // Config contains options for the Scanner.
 type Config struct {
 	BinPath    string   `description:"Nmap binary path to execute."`
+	BinArgs    []string `description:"Nmap flags to pass to the binary. Note that -sV and -oX are always passed."`
 	Scripts    []string `description:"Nmap scripts to execute. Paths must be relative to the nmap script root."`
 	ScriptArgs []string `description:"Any script arguments to inject. Form of argname='argvalue'"`
 }
@@ -352,6 +357,9 @@ func NewComponent() *Component {
 func (*Component) Settings() *Config {
 	return &Config{
 		BinPath: "nmap",
+		BinArgs: []string{
+			"-T5",
+		},
 		Scripts: []string{
 			"http-*",
 			"ssl-*",
@@ -366,5 +374,5 @@ func (*Component) Settings() *Config {
 
 // New constructs a scanner.
 func (*Component) New(ctx context.Context, conf *Config) (domain.Scanner, error) {
-	return NewNMAP(conf.BinPath, conf.Scripts, conf.ScriptArgs), nil
+	return NewNMAP(conf.BinPath, conf.BinArgs, conf.Scripts, conf.ScriptArgs), nil
 }

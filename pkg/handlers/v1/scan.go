@@ -86,6 +86,11 @@ type ScanFinding struct {
 	Vulnerabilities []ScanVulnerability `json:"vulnerabilities"`
 }
 
+// ScanOutput is the response container.
+type ScanOutput struct {
+	Findings []ScanFinding `json:"findings"`
+}
+
 func scanVulnerabilityFromDomain(source domain.Vulnerability) ScanVulnerability {
 	v := ScanVulnerability{
 		Key:            source.Key,
@@ -146,18 +151,23 @@ type Scan struct {
 	Producer domain.Producer
 }
 
-func (h *Scan) handle(ctx context.Context, in ScanInput) ([]ScanFinding, error) {
+func (h *Scan) handle(ctx context.Context, in ScanInput) (ScanOutput, error) {
 	findings, err := h.Scanner.Scan(ctx, in.Host)
 	if err != nil {
-		return nil, err
+		return ScanOutput{}, err
 	}
-	return fromDomain(findings), nil
+	return ScanOutput{Findings: fromDomain(findings)}, nil
 }
 
 // Handle is invoked on each request.
 func (h *Scan) Handle(ctx context.Context, in ScanInput) (interface{}, error) {
 	v, err := h.handle(ctx, in)
-	if err != nil {
+	switch err.(type) {
+	case nil:
+		break
+	case domain.MissingScanTargetError:
+		return nil, domain.NotFoundError{Identifier: in.Host}
+	default:
 		h.LogFn(ctx).Error(logs.ScanFailed{Reason: err.Error(), TargetHost: in.Host})
 		return nil, err
 	}

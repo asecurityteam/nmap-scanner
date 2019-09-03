@@ -80,7 +80,16 @@ type ScanAsync struct {
 // Handle process the async job.
 func (h *ScanAsync) Handle(ctx context.Context, in AsyncScanInput) (interface{}, error) {
 	findings, err := h.Scanner.Scan(ctx, in.Host)
-	if err != nil {
+	switch err.(type) {
+	case nil:
+		break
+	case domain.MissingScanTargetError:
+		// If we attempted to scan something that doesn't exist then fall back
+		// to reporting an empty set of results. This is effectively a NOP since
+		// and empty set will be sent down the pipeline.
+		err = nil
+		findings = []domain.Finding{}
+	default:
 		h.LogFn(ctx).Error(logs.ScanFailed{Reason: err.Error(), TargetHost: in.Host})
 		return nil, err
 	}

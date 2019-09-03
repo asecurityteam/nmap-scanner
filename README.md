@@ -65,12 +65,16 @@ the configuration options for the system:
 ```bash
 # (bool) Use the Lambda SDK to start the system.
 NMAPSCANNER_LAMBDAMODE="false"
+# (string) Name of the function to host in Lambda mode.
+NMAPSCANNER_LAMBDAFUNCTION="scan"
 # (string) The base URL path on which results will be available.
 NMAPSCANNER_RESULTSURL=""
 # ([]string) Any script arguments to inject. Form of argname='argvalue'
 NMAPSCANNER_SCANNER_SCRIPTARGS="vulscanoutput='{id} | {title} | {product} | {version} | {link}\n' vulns.showall=on"
 # ([]string) Nmap scripts to execute. Paths must be relative to the nmap script root.
 NMAPSCANNER_SCANNER_SCRIPTS="http-* ssl-* vulscan/vulscan.nse"
+# (string) Nmap binary arguments/flags to pass.
+NMAPSCANNER_SCANNER_BINARGS="-T5"
 # (string) Nmap binary path to execute.
 NMAPSCANNER_SCANNER_BINPATH="nmap"
 # (string) The type of data store to use for results tracking.

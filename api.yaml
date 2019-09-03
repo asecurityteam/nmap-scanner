@@ -67,6 +67,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ScanResult'
+        "404":
+          description: "Scan target not found."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         "500":
           description: "Internal server error"
           content:
@@ -84,9 +90,13 @@ paths:
           arn: "scan"
           async: false
           request: '#! json .Request.Body !#'
-          success: '{"status": 200, "body": {"findings": #! json .Response.Body #!}}'
-          # TODO: Handle the 404 and 400 cases
-          error: '{"status": 500, "bodyPassthrough": true}'
+          success: '{"status": 200, "body": {"findings": #! json .Response.Body.findings !#}}'
+          error: >
+            #! if eq .Response.Body.errorType "NotFoundError" !#
+            {"status": 404, "bodyPassthrough": true}
+            #! else !#
+            {"status": 500, "bodyPassthrough": true}
+            #! end !#
   /results/{resultId}:
     get:
       description: Check the results of a job
@@ -131,7 +141,7 @@ paths:
             #! else if eq .Response.Body.status "UNKNOWN" !#
             {"status":404}
             #! else if eq .Response.Body.status "READY" !#
-            {"status":200,"body": {"findings": #! json .Response.Body.findings #!}
+            {"status":200,"body": {"findings": #! json .Response.Body.findings !#}
             #! end !#
           error: '{"status": 500, "bodyPassthrough": true}'
   /schedule:
@@ -201,7 +211,7 @@ components:
         state:
           type: string
           description: >
-            An indicator of how whether the scanned system(s) are
+            An indicator of whether the scanned system(s) are
             vulnerable to this known vulnerability. Possible values
             are:
 

@@ -32,6 +32,10 @@ func TestScanError(t *testing.T) {
 	_, err := h.Handle(ctx, in)
 	require.Equal(t, expected, err)
 
+	s.EXPECT().Scan(ctx, in.Host).Return(nil, domain.MissingScanTargetError{Target: in.Host})
+	_, err = h.Handle(ctx, in)
+	require.Equal(t, domain.NotFoundError{Identifier: in.Host}, err)
+
 	s.EXPECT().Scan(ctx, in.Host).Return(nil, nil)
 	p.EXPECT().Produce(ctx, gomock.Any()).Return(nil, expected)
 	_, err = h.Handle(ctx, in)
@@ -88,7 +92,7 @@ func TestScanSuccess(t *testing.T) {
 			},
 		},
 	}
-	expected := []ScanFinding{
+	expected := ScanOutput{Findings: []ScanFinding{
 		{
 			Timestamp: ts,
 			IP:        "127.0.0.1",
@@ -121,7 +125,7 @@ func TestScanSuccess(t *testing.T) {
 				},
 			},
 		},
-	}
+	}}
 
 	s.EXPECT().Scan(ctx, in.Host).Return(found, nil)
 	p.EXPECT().Produce(ctx, expected).Return(expected, nil)
