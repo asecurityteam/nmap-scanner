@@ -5,8 +5,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
-	"reflect"
-	"strings"
+	reflect "reflect"
 	"testing"
 	"time"
 
@@ -25,18 +24,41 @@ func TestNMAPCommandFailure(t *testing.T) {
 	n := NewNMAP("yes", []string{"-v"}, []string{"one", "two"}, []string{"k=v"})
 	n.CommandMaker = cm
 	ctx := context.Background()
-	strFlags := strings.Split(
-		"-sV -oX - -v --script one,two --script-args k=v 127.0.0.1",
-		" ",
-	)
-	// Convert the []string to []interface{} for gomock.
-	expectedFlags := make([]interface{}, 0, len(strFlags))
-	for _, arg := range strFlags {
-		expectedFlags = append(expectedFlags, arg)
+	expectedFlags := []interface{}{
+		`-sV`,
+		`-oX`, `-`,
+		`-v`,
+		`--script`, `one,two`,
+		`--script-args`, `vulns.showall=on,vulscanoutput='{id} | {title} | {product} | {version} | {link}\n',k=v`,
+		`127.0.0.1`,
 	}
 	cm.EXPECT().MakeCommand(ctx, "yes", expectedFlags...).Return(cr)
 	cr.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Return(errors.New("failure"))
 	_, err := n.Scan(ctx, "127.0.0.1")
+	require.NotNil(t, err)
+}
+
+func TestNMAPOverrides(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	cm := NewMockCommandMaker(ctrl)
+	cr := NewMockCommandRunner(ctrl)
+
+	n := NewNMAP("yes", []string{"-v"}, []string{"one", "two"}, []string{"k=v"})
+	n.CommandMaker = cm
+	ctx := context.Background()
+	expectedFlags := []interface{}{
+		`-sV`,
+		`-oX`, `-`,
+		`-v`,
+		`--script`, `three,four`,
+		`--script-args`, `vulns.showall=on,vulscanoutput='{id} | {title} | {product} | {version} | {link}\n',k2=v2`,
+		`127.0.0.1`,
+	}
+	cm.EXPECT().MakeCommand(ctx, "yes", expectedFlags...).Return(cr)
+	cr.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Return(errors.New("failure"))
+	_, err := n.ScanWithScripts(ctx, []string{"three", "four"}, []string{"k2=v2"}, "127.0.0.1")
 	require.NotNil(t, err)
 }
 
@@ -50,14 +72,14 @@ func TestNMAPInvalidXMLOutput(t *testing.T) {
 	n := NewNMAP("yes", []string{"-v"}, []string{"one", "two"}, []string{"k=v"})
 	n.CommandMaker = cm
 	ctx := context.Background()
-	strFlags := strings.Split(
-		"-sV -oX - -v --script one,two --script-args k=v 127.0.0.1",
-		" ",
-	)
-	// Convert the []string to []interface{} for gomock.
-	expectedFlags := make([]interface{}, 0, len(strFlags))
-	for _, arg := range strFlags {
-		expectedFlags = append(expectedFlags, arg)
+
+	expectedFlags := []interface{}{
+		`-sV`,
+		`-oX`, `-`,
+		`-v`,
+		`--script`, `one,two`,
+		`--script-args`, `vulns.showall=on,vulscanoutput='{id} | {title} | {product} | {version} | {link}\n',k=v`,
+		`127.0.0.1`,
 	}
 	cm.EXPECT().MakeCommand(ctx, "yes", expectedFlags...).Return(cr)
 	cr.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Do(func(out io.Writer, err io.Writer) {
@@ -77,14 +99,14 @@ func TestNMAPMissingHost(t *testing.T) {
 	n := NewNMAP("yes", []string{"-v"}, []string{"one", "two"}, []string{"k=v"})
 	n.CommandMaker = cm
 	ctx := context.Background()
-	strFlags := strings.Split(
-		"-sV -oX - -v --script one,two --script-args k=v 127.0.0.1",
-		" ",
-	)
-	// Convert the []string to []interface{} for gomock.
-	expectedFlags := make([]interface{}, 0, len(strFlags))
-	for _, arg := range strFlags {
-		expectedFlags = append(expectedFlags, arg)
+
+	expectedFlags := []interface{}{
+		`-sV`,
+		`-oX`, `-`,
+		`-v`,
+		`--script`, `one,two`,
+		`--script-args`, `vulns.showall=on,vulscanoutput='{id} | {title} | {product} | {version} | {link}\n',k=v`,
+		`127.0.0.1`,
 	}
 	cm.EXPECT().MakeCommand(ctx, "yes", expectedFlags...).Return(cr)
 	cr.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Do(func(out io.Writer, err io.Writer) {
@@ -105,10 +127,14 @@ func TestNMAPSuccess(t *testing.T) {
 	n := NewNMAP("yes", []string{"-v"}, []string{"one", "two"}, []string{"k=v"})
 	n.CommandMaker = cm
 	ctx := context.Background()
-	strFlags := strings.Split(
-		"-sV -oX - -v --script one,two --script-args k=v 127.0.0.1",
-		" ",
-	)
+	expectedFlags := []interface{}{
+		`-sV`,
+		`-oX`, `-`,
+		`-v`,
+		`--script`, `one,two`,
+		`--script-args`, `vulns.showall=on,vulscanoutput='{id} | {title} | {product} | {version} | {link}\n',k=v`,
+		`127.0.0.1`,
+	}
 	expectedResults := []domain.Finding{domain.Finding{
 		Timestamp: time.Unix(1564488249, 0),
 		IP:        "127.0.0.1",
@@ -118,14 +144,12 @@ func TestNMAPSuccess(t *testing.T) {
 				Key:            "NMAP-1",
 				Title:          "Anonymous Diffie-Hellman Key Exchange MitM Vulnerability",
 				State:          "NOT VULNERABLE",
-				IDs:            nil,
-				RiskFactor:     "",
-				Scores:         nil,
-				Description:    "",
-				Dates:          nil,
-				CheckResults:   nil,
-				ExploitResults: nil,
-				ExtraInfo:      nil,
+				IDs:            []domain.VulnerabilityID{},
+				Scores:         []domain.VulnerabilityScore{},
+				Dates:          []domain.VulnerabilityDate{},
+				CheckResults:   []string{},
+				ExploitResults: []string{},
+				ExtraInfo:      []string{},
 				References:     []string{"https://www.ietf.org/rfc/rfc2246.txt"},
 				Source:         "ssl-dh-params",
 				Port:           443,
@@ -140,13 +164,11 @@ func TestNMAPSuccess(t *testing.T) {
 					domain.VulnerabilityID{Type: "CVE", Value: "CVE-2015-4000"},
 					domain.VulnerabilityID{Type: "OSVDB", Value: "122331"},
 				},
-				RiskFactor:     "",
-				Scores:         nil,
-				Description:    "",
-				Dates:          nil,
-				CheckResults:   nil,
-				ExploitResults: nil,
-				ExtraInfo:      nil,
+				Scores:         []domain.VulnerabilityScore{},
+				Dates:          []domain.VulnerabilityDate{},
+				CheckResults:   []string{},
+				ExploitResults: []string{},
+				ExtraInfo:      []string{},
 				References: []string{
 					"https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-4000",
 					"https://weakdh.org",
@@ -161,14 +183,12 @@ func TestNMAPSuccess(t *testing.T) {
 				Key:            "NMAP-2",
 				Title:          "Diffie-Hellman Key Exchange Insufficient Group Strength",
 				State:          "NOT VULNERABLE",
-				IDs:            nil,
-				RiskFactor:     "",
-				Scores:         nil,
-				Description:    "",
-				Dates:          nil,
-				CheckResults:   nil,
-				ExploitResults: nil,
-				ExtraInfo:      nil,
+				IDs:            []domain.VulnerabilityID{},
+				Scores:         []domain.VulnerabilityScore{},
+				Dates:          []domain.VulnerabilityDate{},
+				CheckResults:   []string{},
+				ExploitResults: []string{},
+				ExtraInfo:      []string{},
 				References: []string{
 					"https://weakdh.org",
 				},
@@ -181,14 +201,12 @@ func TestNMAPSuccess(t *testing.T) {
 				Key:            "NMAP-3",
 				Title:          "Diffie-Hellman Key Exchange Incorrectly Generated Group Parameters",
 				State:          "NOT VULNERABLE",
-				IDs:            nil,
-				RiskFactor:     "",
-				Scores:         nil,
-				Description:    "",
-				Dates:          nil,
-				CheckResults:   nil,
-				ExploitResults: nil,
-				ExtraInfo:      nil,
+				IDs:            []domain.VulnerabilityID{},
+				Scores:         []domain.VulnerabilityScore{},
+				Dates:          []domain.VulnerabilityDate{},
+				CheckResults:   []string{},
+				ExploitResults: []string{},
+				ExtraInfo:      []string{},
 				References: []string{
 					"https://weakdh.org",
 					"http://www2.esentire.com/TLSUnjammedWP",
@@ -202,14 +220,12 @@ func TestNMAPSuccess(t *testing.T) {
 				Key:            "NMAP-4",
 				Title:          "The Heartbleed Bug is a serious vulnerability in the popular OpenSSL cryptographic software library. It allows for stealing information intended to be protected by SSL/TLS encryption.",
 				State:          "NOT VULNERABLE",
-				IDs:            nil,
-				RiskFactor:     "",
-				Scores:         nil,
-				Description:    "",
-				Dates:          nil,
-				CheckResults:   nil,
-				ExploitResults: nil,
-				ExtraInfo:      nil,
+				IDs:            []domain.VulnerabilityID{},
+				Scores:         []domain.VulnerabilityScore{},
+				Dates:          []domain.VulnerabilityDate{},
+				CheckResults:   []string{},
+				ExploitResults: []string{},
+				ExtraInfo:      []string{},
 				References: []string{
 					"http://www.openssl.org/news/secadv_20140407.txt ",
 					"http://cvedetails.com/cve/2014-0160/",
@@ -228,13 +244,11 @@ func TestNMAPSuccess(t *testing.T) {
 					domain.VulnerabilityID{Type: "CVE", Value: "CVE-2014-3566"},
 					domain.VulnerabilityID{Type: "OSVDB", Value: "113251"},
 				},
-				RiskFactor:     "",
-				Scores:         nil,
-				Description:    "",
-				Dates:          nil,
-				CheckResults:   nil,
-				ExploitResults: nil,
-				ExtraInfo:      nil,
+				Scores:         []domain.VulnerabilityScore{},
+				Dates:          []domain.VulnerabilityDate{},
+				CheckResults:   []string{},
+				ExploitResults: []string{},
+				ExtraInfo:      []string{},
 				References: []string{
 					"https://www.openssl.org/~bodo/ssl-poodle.pdf",
 					"https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2014-3566",
@@ -259,11 +273,11 @@ func TestNMAPSuccess(t *testing.T) {
 					domain.VulnerabilityScore{Type: "UNKNOWN", Value: "10.0"},
 				},
 				Description:    "A test case",
-				Dates:          nil,
 				CheckResults:   []string{"STRING", "STRING2"},
 				ExploitResults: []string{"STRING", "STRING2"},
 				ExtraInfo:      []string{"STRING", "STRING2"},
-				References:     nil,
+				Dates:          []domain.VulnerabilityDate{},
+				References:     []string{},
 				Source:         "fake-for-test",
 				Port:           443,
 				Protocol:       "tcp",
@@ -271,11 +285,6 @@ func TestNMAPSuccess(t *testing.T) {
 			},
 		},
 	},
-	}
-	// Convert the []string to []interface{} for gomock.
-	expectedFlags := make([]interface{}, 0, len(strFlags))
-	for _, arg := range strFlags {
-		expectedFlags = append(expectedFlags, arg)
 	}
 	cm.EXPECT().MakeCommand(ctx, "yes", expectedFlags...).Return(cr)
 	cr.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Do(func(out io.Writer, err io.Writer) {
@@ -298,42 +307,80 @@ func Test_parseVulscan(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "one found",
-			raw:  "CVE-1234 | A crazy exploit | Internet Browser | <1.2.3 | https://127.0.0.1\n",
+			name: "no match",
+			raw:  "CVE-1234 | A crazy exploit | Internet Browser | <1.2.3 | https://127.0.0.1 | 0\n",
 			want: []domain.Vulnerability{
 				{
-					State:       "VULNERABLE",
-					Title:       "CVE-1234",
-					Description: "A crazy exploit",
-					ExtraInfo:   []string{"Internet Browser", "<1.2.3"},
-					References:  []string{"https://127.0.0.1"},
+					State:          "NOT VULNERABLE",
+					Title:          "CVE-1234",
+					Description:    "A crazy exploit",
+					ExtraInfo:      []string{"Internet Browser", "<1.2.3"},
+					References:     []string{"https://127.0.0.1"},
+					IDs:            []domain.VulnerabilityID{},
+					Scores:         []domain.VulnerabilityScore{},
+					Dates:          []domain.VulnerabilityDate{},
+					CheckResults:   []string{},
+					ExploitResults: []string{},
+				},
+			},
+		},
+		{
+			name: "one found",
+			raw:  "CVE-1234 | A crazy exploit | Internet Browser | <1.2.3 | https://127.0.0.1 | 1\n",
+			want: []domain.Vulnerability{
+				{
+					State:          "VULNERABLE",
+					Title:          "CVE-1234",
+					Description:    "A crazy exploit",
+					ExtraInfo:      []string{"Internet Browser", "<1.2.3"},
+					References:     []string{"https://127.0.0.1"},
+					IDs:            []domain.VulnerabilityID{},
+					Scores:         []domain.VulnerabilityScore{},
+					Dates:          []domain.VulnerabilityDate{},
+					CheckResults:   []string{},
+					ExploitResults: []string{},
 				},
 			},
 		},
 		{
 			name: "some found",
-			raw:  "CVE-1234 | A crazy exploit | Internet Browser | <1.2.3 | https://127.0.0.1\nINVALID LINE\nCVE-2345 | A better exploit | Internet Server | >1.2.3 | https://127.0.0.1\nCVE-3456 | A sad exploit | Internet Device | =1.2.3 | https://127.0.0.1\n",
+			raw:  "CVE-1234 | A crazy exploit | Internet Browser | <1.2.3 | https://127.0.0.1 | 1\nINVALID LINE\nCVE-2345 | A better exploit | Internet Server | >1.2.3 | https://127.0.0.1 | 1\nCVE-3456 | A sad exploit | Internet Device | =1.2.3 | https://127.0.0.1 | 1\n",
 			want: []domain.Vulnerability{
 				{
-					State:       "VULNERABLE",
-					Title:       "CVE-1234",
-					Description: "A crazy exploit",
-					ExtraInfo:   []string{"Internet Browser", "<1.2.3"},
-					References:  []string{"https://127.0.0.1"},
+					State:          "VULNERABLE",
+					Title:          "CVE-1234",
+					Description:    "A crazy exploit",
+					ExtraInfo:      []string{"Internet Browser", "<1.2.3"},
+					References:     []string{"https://127.0.0.1"},
+					IDs:            []domain.VulnerabilityID{},
+					Scores:         []domain.VulnerabilityScore{},
+					Dates:          []domain.VulnerabilityDate{},
+					CheckResults:   []string{},
+					ExploitResults: []string{},
 				},
 				{
-					State:       "VULNERABLE",
-					Title:       "CVE-2345",
-					Description: "A better exploit",
-					ExtraInfo:   []string{"Internet Server", ">1.2.3"},
-					References:  []string{"https://127.0.0.1"},
+					State:          "VULNERABLE",
+					Title:          "CVE-2345",
+					Description:    "A better exploit",
+					ExtraInfo:      []string{"Internet Server", ">1.2.3"},
+					References:     []string{"https://127.0.0.1"},
+					IDs:            []domain.VulnerabilityID{},
+					Scores:         []domain.VulnerabilityScore{},
+					Dates:          []domain.VulnerabilityDate{},
+					CheckResults:   []string{},
+					ExploitResults: []string{},
 				},
 				{
-					State:       "VULNERABLE",
-					Title:       "CVE-3456",
-					Description: "A sad exploit",
-					ExtraInfo:   []string{"Internet Device", "=1.2.3"},
-					References:  []string{"https://127.0.0.1"},
+					State:          "VULNERABLE",
+					Title:          "CVE-3456",
+					Description:    "A sad exploit",
+					ExtraInfo:      []string{"Internet Device", "=1.2.3"},
+					References:     []string{"https://127.0.0.1"},
+					IDs:            []domain.VulnerabilityID{},
+					Scores:         []domain.VulnerabilityScore{},
+					Dates:          []domain.VulnerabilityDate{},
+					CheckResults:   []string{},
+					ExploitResults: []string{},
 				},
 			},
 		},
@@ -378,6 +425,12 @@ func Test_parseVulnsLib(t *testing.T) {
 					References: []string{
 						"https://www.ietf.org/rfc/rfc2246.txt",
 					},
+					IDs:            []domain.VulnerabilityID{},
+					Scores:         []domain.VulnerabilityScore{},
+					Dates:          []domain.VulnerabilityDate{},
+					CheckResults:   []string{},
+					ExploitResults: []string{},
+					ExtraInfo:      []string{},
 				},
 				{
 					Key:   "CVE-2015-4000",
@@ -398,6 +451,11 @@ func Test_parseVulnsLib(t *testing.T) {
 						"https://weakdh.org",
 						"http://osvdb.org/122331",
 					},
+					Scores:         []domain.VulnerabilityScore{},
+					Dates:          []domain.VulnerabilityDate{},
+					CheckResults:   []string{},
+					ExploitResults: []string{},
+					ExtraInfo:      []string{},
 				},
 				{
 					Key:   "NMAP-2",
@@ -406,6 +464,12 @@ func Test_parseVulnsLib(t *testing.T) {
 					References: []string{
 						"https://weakdh.org",
 					},
+					IDs:            []domain.VulnerabilityID{},
+					Scores:         []domain.VulnerabilityScore{},
+					Dates:          []domain.VulnerabilityDate{},
+					CheckResults:   []string{},
+					ExploitResults: []string{},
+					ExtraInfo:      []string{},
 				},
 				{
 					Key:   "NMAP-3",
@@ -415,6 +479,12 @@ func Test_parseVulnsLib(t *testing.T) {
 						"https://weakdh.org",
 						"http://www2.esentire.com/TLSUnjammedWP",
 					},
+					IDs:            []domain.VulnerabilityID{},
+					Scores:         []domain.VulnerabilityScore{},
+					Dates:          []domain.VulnerabilityDate{},
+					CheckResults:   []string{},
+					ExploitResults: []string{},
+					ExtraInfo:      []string{},
 				},
 			},
 		},
@@ -447,6 +517,8 @@ func Test_parseVulnsLib(t *testing.T) {
 						{Type: "CVSS", Value: "10.0"},
 						{Type: "UNKNOWN", Value: "10.0"},
 					},
+					Dates:      []domain.VulnerabilityDate{},
+					References: []string{},
 				},
 			},
 		},
@@ -671,7 +743,7 @@ var xmlMissingHost = `
 `
 
 func TestNMAPComponent(t *testing.T) {
-	cmp := NewComponent()
+	cmp := NewComponent(testLogFn)
 	require.Equal(t, "scanner", cmp.Settings().Name())
 	s, err := cmp.New(context.Background(), cmp.Settings())
 	require.Nil(t, err)

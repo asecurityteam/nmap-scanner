@@ -16,11 +16,13 @@ func TestScanError(t *testing.T) {
 	defer ctrl.Finish()
 
 	s := NewMockScanner(ctrl)
+	ss := NewMockScriptedScanner(ctrl)
 	p := NewMockProducer(ctrl)
 	h := &Scan{
-		Producer: p,
-		Scanner:  s,
-		LogFn:    testLogFn,
+		Producer:        p,
+		Scanner:         s,
+		ScriptedScanner: ss,
+		LogFn:           testLogFn,
 	}
 	ctx := context.Background()
 	in := ScanInput{
@@ -40,6 +42,26 @@ func TestScanError(t *testing.T) {
 	p.EXPECT().Produce(ctx, gomock.Any()).Return(nil, expected)
 	_, err = h.Handle(ctx, in)
 	require.Equal(t, expected, err)
+
+	scripts := []string{"script1", "script2"}
+	args := []string{"arg1=v1", "arg2=v2"}
+	in = ScanInput{
+		Host:       "127.0.0.1",
+		Scripts:    scripts,
+		ScriptArgs: args,
+	}
+	ss.EXPECT().ScanWithScripts(ctx, scripts, args, in.Host).Return(nil, expected)
+	_, err = h.Handle(ctx, in)
+	require.Equal(t, expected, err)
+
+	ss.EXPECT().ScanWithScripts(ctx, scripts, args, in.Host).Return(nil, domain.MissingScanTargetError{Target: in.Host})
+	_, err = h.Handle(ctx, in)
+	require.Equal(t, domain.NotFoundError{Identifier: in.Host}, err)
+
+	ss.EXPECT().ScanWithScripts(ctx, scripts, args, in.Host).Return(nil, nil)
+	p.EXPECT().Produce(ctx, gomock.Any()).Return(nil, expected)
+	_, err = h.Handle(ctx, in)
+	require.Equal(t, expected, err)
 }
 
 func TestScanSuccess(t *testing.T) {
@@ -47,11 +69,13 @@ func TestScanSuccess(t *testing.T) {
 	defer ctrl.Finish()
 
 	s := NewMockScanner(ctrl)
+	ss := NewMockScriptedScanner(ctrl)
 	p := NewMockProducer(ctrl)
 	h := &Scan{
-		Producer: p,
-		Scanner:  s,
-		LogFn:    testLogFn,
+		Producer:        p,
+		Scanner:         s,
+		ScriptedScanner: ss,
+		LogFn:           testLogFn,
 	}
 	ctx := context.Background()
 	in := ScanInput{
@@ -130,6 +154,19 @@ func TestScanSuccess(t *testing.T) {
 	s.EXPECT().Scan(ctx, in.Host).Return(found, nil)
 	p.EXPECT().Produce(ctx, expected).Return(expected, nil)
 	out, err := h.Handle(ctx, in)
+	require.Nil(t, err)
+	require.Equal(t, expected, out)
+
+	scripts := []string{"script1", "script2"}
+	args := []string{"arg1=v1", "arg2=v2"}
+	in = ScanInput{
+		Host:       "127.0.0.1",
+		Scripts:    scripts,
+		ScriptArgs: args,
+	}
+	ss.EXPECT().ScanWithScripts(ctx, scripts, args, in.Host).Return(found, nil)
+	p.EXPECT().Produce(ctx, expected).Return(expected, nil)
+	out, err = h.Handle(ctx, in)
 	require.Nil(t, err)
 	require.Equal(t, expected, out)
 }

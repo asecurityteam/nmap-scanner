@@ -162,12 +162,14 @@ func TestScanAsync(t *testing.T) {
 
 	st := NewMockStore(ctrl)
 	s := NewMockScanner(ctrl)
+	ss := NewMockScriptedScanner(ctrl)
 	p := NewMockProducer(ctrl)
 	h := &ScanAsync{
-		LogFn:    testLogFn,
-		Store:    st,
-		Producer: p,
-		Scanner:  s,
+		LogFn:           testLogFn,
+		Store:           st,
+		Producer:        p,
+		Scanner:         s,
+		ScriptedScanner: ss,
 	}
 	ctx := context.Background()
 	id := newID()
@@ -273,6 +275,45 @@ func TestScanAsync(t *testing.T) {
 	st.EXPECT().Set(ctx, id, gomock.Any()).Return(nil)
 	p.EXPECT().Produce(ctx, gomock.Any()).Return([]domain.Finding{}, nil)
 	f, err := h.Handle(ctx, in)
+	require.Nil(t, err)
+	require.Equal(t, []domain.Finding{}, f)
+
+	scripts := []string{"script1", "script2"}
+	args := []string{"arg1=v1", "arg2=v2"}
+	in = AsyncScanInput{
+		Identifier: id,
+		ScanInput: ScanInput{
+			Host:       "127.0.0.1",
+			Scripts:    scripts,
+			ScriptArgs: args,
+		},
+	}
+
+	ss.EXPECT().ScanWithScripts(ctx, scripts, args, in.Host).Return(nil, expectedErr)
+	_, err = h.Handle(ctx, in)
+	require.Equal(t, expectedErr, err)
+
+	ss.EXPECT().ScanWithScripts(ctx, scripts, args, in.Host).Return(found, nil)
+	st.EXPECT().Set(ctx, id, found).Return(expectedErr)
+	_, err = h.Handle(ctx, in)
+	require.Equal(t, expectedErr, err)
+
+	ss.EXPECT().ScanWithScripts(ctx, scripts, args, in.Host).Return(found, nil)
+	st.EXPECT().Set(ctx, id, found).Return(nil)
+	p.EXPECT().Produce(ctx, expected).Return(nil, expectedErr)
+	_, err = h.Handle(ctx, in)
+	require.Equal(t, expectedErr, err)
+
+	ss.EXPECT().ScanWithScripts(ctx, scripts, args, in.Host).Return(found, nil)
+	st.EXPECT().Set(ctx, id, found).Return(nil)
+	p.EXPECT().Produce(ctx, expected).Return(expected, nil)
+	_, err = h.Handle(ctx, in)
+	require.Nil(t, err)
+
+	ss.EXPECT().ScanWithScripts(ctx, scripts, args, in.Host).Return(nil, domain.MissingScanTargetError{Target: in.Host})
+	st.EXPECT().Set(ctx, id, gomock.Any()).Return(nil)
+	p.EXPECT().Produce(ctx, gomock.Any()).Return([]domain.Finding{}, nil)
+	f, err = h.Handle(ctx, in)
 	require.Nil(t, err)
 	require.Equal(t, []domain.Finding{}, f)
 }

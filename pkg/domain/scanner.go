@@ -116,3 +116,9 @@ func (e MissingScanTargetError) Error() string {
 type Scanner interface {
 	Scan(ctx context.Context, host string) ([]Finding, error)
 }
+
+// ScriptedScanner is a Scanner that enables per-scan overrides of the specific
+// scripts that are executed.
+type ScriptedScanner interface {
+	ScanWithScripts(ctx context.Context, scripts []string, scriptArgs []string, host string) ([]Finding, error)
+}

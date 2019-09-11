@@ -55,7 +55,7 @@ type component struct {
 
 func newComponent() *component {
 	return &component{
-		Scanner:         scanner.NewComponent(),
+		Scanner:         scanner.NewComponent(runhttp.LoggerFromContext),
 		Store:           store.NewComponent(),
 		ResultsProducer: producer.NewComponent(),
 		WorkProducer:    producer.NewComponent(),
@@ -89,15 +89,17 @@ func (c *component) New(ctx context.Context, conf *config) (func(context.Context
 		return nil, err
 	}
 	scanHandler := &v1.Scan{
-		LogFn:    runhttp.LoggerFromContext,
-		Producer: rp,
-		Scanner:  sc,
+		LogFn:           runhttp.LoggerFromContext,
+		Producer:        rp,
+		Scanner:         sc,
+		ScriptedScanner: sc,
 	}
 	asyncScanHandler := &v1.ScanAsync{
-		LogFn:    runhttp.LoggerFromContext,
-		Store:    s,
-		Producer: rp,
-		Scanner:  sc,
+		LogFn:           runhttp.LoggerFromContext,
+		Store:           s,
+		Producer:        rp,
+		Scanner:         sc,
+		ScriptedScanner: sc,
 	}
 	u, err := url.Parse(conf.ResultsURL)
 	if err != nil {

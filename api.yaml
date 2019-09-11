@@ -326,6 +326,16 @@ components:
         host:
           type: string
           description: The hostname or IP to scan.
+        scripts:
+          type: array
+          items:
+            type: string
+          description: The full list of scripts to enable during the scan.
+        script_args:
+          type: array
+          items:
+            type: string
+          description: The full list of script arguments to pass.
     ScanResult:
       type: object
       properties:

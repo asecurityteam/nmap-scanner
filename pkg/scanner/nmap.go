@@ -6,10 +6,18 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/asecurityteam/nmap-scanner/pkg/domain"
+)
+
+var (
+	requiredScriptArgs = []string{
+		`vulns.showall=on`,
+		`vulscanoutput='{id} | {title} | {product} | {version} | {link}\n'`,
+	}
 )
 
 // nmapOutputElement is a key/value pair from a script.
@@ -117,39 +125,81 @@ type nmapContainer struct {
 
 // NMAP implements the scanner interface by making a subprocess call to nmap.
 type NMAP struct {
+	BinPath        string
+	BinArgs        []string
+	Scripts        []string
+	ScriptArgs     []string
 	CommandStrings []string
 	CommandMaker   CommandMaker
 }
 
 // NewNMAP generates a Scanner implementation tha leverages NMAP internally.
 func NewNMAP(binPath string, binArgs []string, scripts []string, scriptArgs []string) *NMAP {
-	strs := make([]string, 0, 6+len(binArgs)+len(scriptArgs))
-	strs = append(
-		strs,
-		binPath,
-		`-sV`,      // Enable version detection of systems.
-		`-oX`, `-`, // Enable XML output mode and send to stdout.
-	)
-	strs = append(strs, binArgs...)
+	return &NMAP{
+		BinPath:      binPath,
+		BinArgs:      binArgs,
+		Scripts:      scripts,
+		ScriptArgs:   scriptArgs,
+		CommandMaker: &ExecMaker{},
+	}
+}
+
+// WithScripts overrides the active scripts for a scan.
+func (s *NMAP) WithScripts(scripts []string) *NMAP {
+	return &NMAP{
+		BinPath:      s.BinPath,
+		BinArgs:      s.BinArgs,
+		Scripts:      scripts,
+		ScriptArgs:   s.ScriptArgs,
+		CommandMaker: s.CommandMaker,
+	}
+}
+
+// WithScriptArgs overrides the active scripts arguments for a scan.
+func (s *NMAP) WithScriptArgs(args []string) *NMAP {
+	return &NMAP{
+		BinPath:      s.BinPath,
+		BinArgs:      s.BinArgs,
+		Scripts:      s.Scripts,
+		ScriptArgs:   args,
+		CommandMaker: s.CommandMaker,
+	}
+}
+
+// ScanWithScripts overrides the default script and script arguments.
+func (s *NMAP) ScanWithScripts(ctx context.Context, scripts []string, scriptArgs []string, host string) ([]domain.Finding, error) {
+	sc := s
 	if len(scripts) > 0 {
-		strs = append(strs, `--script`, strings.Join(scripts, ","))
+		sc = sc.WithScripts(scripts)
 	}
 	if len(scriptArgs) > 0 {
-		// Optionally pass in script args if present.
-		strs = append(strs, `--script-args`, strings.Join(scriptArgs, ","))
+		sc = sc.WithScriptArgs(scriptArgs)
 	}
-	return &NMAP{
-		CommandStrings: strs,
-		CommandMaker:   &ExecMaker{},
-	}
+	return sc.Scan(ctx, host)
 }
 
 // Scan a host using nmap.
 func (s *NMAP) Scan(ctx context.Context, host string) ([]domain.Finding, error) {
-	cmdStr := make([]string, len(s.CommandStrings)+1)
-	copy(cmdStr, s.CommandStrings)
-	cmdStr[len(cmdStr)-1] = host
-	cmd := s.CommandMaker.MakeCommand(ctx, cmdStr[0], cmdStr[1:]...)
+	strs := make([]string, 0, 6+len(s.BinArgs))
+	strs = append(
+		strs,
+		s.BinPath,
+		`-sV`,      // Enable version detection of systems.
+		`-oX`, `-`, // Enable XML output mode and send to stdout.
+	)
+	strs = append(strs, s.BinArgs...)
+	if len(s.Scripts) > 0 {
+		strs = append(strs, `--script`, strings.Join(s.Scripts, ","))
+	}
+	if len(s.ScriptArgs) > 0 {
+		// Optionally pass in script args if present.
+		args := make([]string, len(s.ScriptArgs)+len(requiredScriptArgs))
+		copy(args, requiredScriptArgs)
+		copy(args[len(requiredScriptArgs):], s.ScriptArgs)
+		strs = append(strs, `--script-args`, strings.Join(args, ","))
+	}
+	strs = append(strs, host)
+	cmd := s.CommandMaker.MakeCommand(ctx, strs[0], strs[1:]...)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	if err := cmd.RunCommand(&stdout, &stderr); err != nil {
@@ -212,7 +262,14 @@ func parseVulnsLib(tables []nmapOutputTable) []domain.Vulnerability { //nolint(g
 	vs := make([]domain.Vulnerability, 0, len(tables))
 	for _, tbl := range tables {
 		v := domain.Vulnerability{
-			Key: tbl.Key,
+			Key:            tbl.Key,
+			IDs:            []domain.VulnerabilityID{},
+			Scores:         []domain.VulnerabilityScore{},
+			Dates:          []domain.VulnerabilityDate{},
+			CheckResults:   []string{},
+			ExploitResults: []string{},
+			ExtraInfo:      []string{},
+			References:     []string{},
 		}
 		for _, elm := range tbl.Elements {
 			switch elm.Key {
@@ -315,13 +372,23 @@ func parseVulscan(raw string) []domain.Vulnerability {
 	var r []domain.Vulnerability // nolint(unknown length, can't preallocate)
 	for s.Scan() {
 		parts := strings.Split(s.Text(), "|")
-		if len(parts) != 5 {
-			continue // there are various other lines in there that aren't results
+		if len(parts) != 6 {
+			continue // there are various other lines in there that aren't results.
+		}
+		matches, _ := strconv.Atoi(strings.TrimSpace(parts[5]))
+		state := domain.VulnStateVuln
+		if matches < 1 {
+			state = domain.VulnStateNot
 		}
 		r = append(r, domain.Vulnerability{
-			State:       "VULNERABLE",
-			Title:       strings.TrimSpace(parts[0]),
-			Description: strings.TrimSpace(parts[1]),
+			State:          state,
+			IDs:            []domain.VulnerabilityID{},
+			Scores:         []domain.VulnerabilityScore{},
+			Dates:          []domain.VulnerabilityDate{},
+			CheckResults:   []string{},
+			ExploitResults: []string{},
+			Title:          strings.TrimSpace(parts[0]),
+			Description:    strings.TrimSpace(parts[1]),
 			ExtraInfo: []string{
 				strings.TrimSpace(parts[2]),
 				strings.TrimSpace(parts[3]),
@@ -346,11 +413,15 @@ func (*Config) Name() string {
 }
 
 // Component loads a Scanner.
-type Component struct{}
+type Component struct {
+	LogFn domain.LogFn
+}
 
 // NewComponent populates the defaults.
-func NewComponent() *Component {
-	return &Component{}
+func NewComponent(logFN domain.LogFn) *Component {
+	return &Component{
+		LogFn: logFN,
+	}
 }
 
 // Settings generates the default settings.
@@ -361,18 +432,20 @@ func (*Component) Settings() *Config {
 			"-T5",
 		},
 		Scripts: []string{
-			"http-*",
+			"http-vuln-*",
 			"ssl-*",
-			"vulscan/vulscan.nse",
+			"vuln",
 		},
-		ScriptArgs: []string{
-			`vulscanoutput='{id} | {title} | {product} | {version} | {link}\n'`,
-			`vulns.showall=on`,
-		},
+		ScriptArgs: []string{},
 	}
 }
 
 // New constructs a scanner.
-func (*Component) New(ctx context.Context, conf *Config) (domain.Scanner, error) {
-	return NewNMAP(conf.BinPath, conf.BinArgs, conf.Scripts, conf.ScriptArgs), nil
+func (c *Component) New(ctx context.Context, conf *Config) (*NMAP, error) {
+	n := NewNMAP(conf.BinPath, conf.BinArgs, conf.Scripts, conf.ScriptArgs)
+	n.CommandMaker = &LoggingMaker{
+		CommandMaker: n.CommandMaker,
+		LogFn:        c.LogFn,
+	}
+	return n, nil
 }

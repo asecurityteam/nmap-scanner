@@ -13,7 +13,7 @@ hosts as well as for regular scans of all of our hosts for regressions.
     - [Overview](#overview)
     - [Quick Start](#quick-start)
     - [Configuration](#configuration)
-    - [Adding Your Own Scripts](#adding-your-own-scripts)
+        - [Adding Your Own Scripts](#adding-your-own-scripts)
         - [Logging](#logging)
         - [Stats](#stats)
     - [Status](#status)
@@ -46,11 +46,22 @@ Install docker and docker-compose.
 The app can be run locally by running `make run`.
 
 This will start a service listening on 8080.
-```
+
+```sh
 curl -v \
     --request POST \
-    --header "Content-Type:application/json \
+    --header "Content-Type:application/json" \
     --data '{"host": "myserver.com"}' \
+    "http://localhost:8080"
+```
+
+Or to run a scan using a non-default set of scripts:
+
+```sh
+curl -v \
+    --request POST \
+    --header "Content-Type:application/json" \
+    --data '{"host": "myserver.com", "scripts": ["http-vuln-*", "ssl-*"]}' \
     "http://localhost:8080"
 ```
 
@@ -201,7 +212,7 @@ SERVERFULL_SIGNALS_OS_SIGNALS="15 2"
 ```
 
 <a id="markdown-adding-your-own-scripts" name="adding-your-own-scripts"></a>
-## Adding Your Own Scripts
+### Adding Your Own Scripts
 
 There are a few ways to do this. One option is to fork our repository, add
 your scripts to the `scripts` directory, and rebuild the image using the
