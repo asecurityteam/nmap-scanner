@@ -84,6 +84,7 @@ require (
 
 replace (
 	github.com/golang/lint => golang.org/x/lint v0.0.0-20190409202823-959b441ac422
+	github.com/uber/jaeger-lib v1.5.0+incompatible => github.com/uber/jaeger-lib v1.5.0
 	gopkg.in/urfave/cli.v1 => github.com/urfave/cli v1.21.0
 	sourcegraph.com/sourcegraph/go-diff => github.com/sourcegraph/go-diff v0.5.1
 )
