@@ -5,19 +5,19 @@ dep:
 	docker run -ti \
         --mount src="$(DIR)",target="$(DIR)",type="bind" \
         -w "$(DIR)" \
-        asecurityteam/sdcli:v1 go dep
+        asecurityteam/sdcli:v1.0 go dep
 
 lint:
 	docker run -ti \
         --mount src="$(DIR)",target="$(DIR)",type="bind" \
         -w "$(DIR)" \
-        asecurityteam/sdcli:v1 go lint
+        asecurityteam/sdcli:v1.0 go lint
 
 test:
 	docker run -ti \
         --mount src="$(DIR)",target="$(DIR)",type="bind" \
         -w "$(DIR)" \
-        asecurityteam/sdcli:v1 go test
+        asecurityteam/sdcli:v1.0 go test
 
 integration:
 	DIR=$(DIR) \
@@ -32,7 +32,7 @@ coverage:
 	docker run -ti \
         --mount src="$(DIR)",target="$(DIR)",type="bind" \
         -w "$(DIR)" \
-        asecurityteam/sdcli:v1 go coverage
+        asecurityteam/sdcli:v1.0 go coverage
 
 doc: ;
 
