@@ -1,5 +1,6 @@
 <a id="markdown-nmap-scanner" name="nmap-scanner"></a>
 # nmap-scanner
+[![GoDoc](https://godoc.org/github.com/asecurityteam/nmap-scanner?status.svg)](https://godoc.org/github.com/asecurityteam/nmap-scanner)
 
 A collection of custom nmap scripts and a service that executes them against
 a host. We use this to run our vulnerability proofs-of-concept against our own
