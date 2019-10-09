@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/google/uuid"
+
 	producer "github.com/asecurityteam/component-producer"
 	v1 "github.com/asecurityteam/nmap-scanner/pkg/handlers/v1"
 	"github.com/asecurityteam/nmap-scanner/pkg/scanner"
@@ -110,6 +112,10 @@ func (c *component) New(ctx context.Context, conf *config) (func(context.Context
 		Producer: wp,
 		Store:    s,
 		BaseURL:  u,
+		IDGenerator: func() string {
+			u, _ := uuid.NewUUID()
+			return u.String()
+		},
 	}
 	asyncResultsHandler := &v1.ScanAsyncFetch{
 		Store: s,

@@ -104,7 +104,11 @@ func (h *ScanAsync) Handle(ctx context.Context, in AsyncScanInput) (interface{},
 		h.LogFn(ctx).Error(logs.StoreFailed{Reason: err.Error(), TargetHost: in.Host})
 		return nil, err
 	}
-	final, err := h.Producer.Produce(ctx, fromDomain(findings))
+	out := AsyncScanResult{
+		Status:   stateReady,
+		Findings: fromDomain(findings),
+	}
+	final, err := h.Producer.Produce(ctx, out)
 	if err != nil {
 		h.LogFn(ctx).Error(logs.ProduceFailed{Reason: err.Error(), TargetHost: in.Host})
 	}
@@ -127,6 +131,12 @@ func (h *ScanAsyncSubmit) Handle(ctx context.Context, in ScanInput) (interface{}
 	ain := AsyncScanInput{
 		ScanInput:  in,
 		Identifier: id,
+	}
+	if ain.Scripts == nil {
+		ain.Scripts = make([]string, 0)
+	}
+	if ain.ScriptArgs == nil {
+		ain.ScriptArgs = make([]string, 0)
 	}
 	if err := h.Store.Mark(ctx, id); err != nil {
 		h.LogFn(ctx).Error(logs.MarkFailed{Reason: err.Error()})

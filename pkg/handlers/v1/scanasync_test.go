@@ -136,7 +136,7 @@ func TestScanAsyncSubmit(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	in := ScanInput{Host: "127.0.0.1"}
+	in := ScanInput{Host: "127.0.0.1", Scripts: []string{}, ScriptArgs: []string{}}
 	ain := AsyncScanInput{ScanInput: in, Identifier: id}
 	expectedErr := errors.New("")
 
@@ -214,36 +214,39 @@ func TestScanAsync(t *testing.T) {
 			},
 		},
 	}
-	expected := []ScanFinding{
-		{
-			Timestamp: ts,
-			IP:        "127.0.0.1",
-			Hostnames: []string{"localhost", "testmachine"},
-			Vulnerabilities: []ScanVulnerability{
-				{
-					Key:   "CVE-1234",
-					Title: "AN EXPLOIT",
-					State: domain.VulnStateExploit,
-					IDs: []ScanVulnerabilityID{
-						{Type: "CVE", Value: "CVE-1234"},
-					},
-					RiskFactor: domain.RiskFactorHigh,
-					Scores: []ScanVulnerabilityScore{
-						{Type: "CVSSv2", Value: "10.0"},
-					},
-					Dates: []ScanVulnerabilityDate{
-						{
-							Type:  "disclosure",
-							Year:  1970,
-							Month: 01,
-							Day:   01,
+	expected := AsyncScanResult{
+		Status: stateReady,
+		Findings: []ScanFinding{
+			{
+				Timestamp: ts,
+				IP:        "127.0.0.1",
+				Hostnames: []string{"localhost", "testmachine"},
+				Vulnerabilities: []ScanVulnerability{
+					{
+						Key:   "CVE-1234",
+						Title: "AN EXPLOIT",
+						State: domain.VulnStateExploit,
+						IDs: []ScanVulnerabilityID{
+							{Type: "CVE", Value: "CVE-1234"},
 						},
+						RiskFactor: domain.RiskFactorHigh,
+						Scores: []ScanVulnerabilityScore{
+							{Type: "CVSSv2", Value: "10.0"},
+						},
+						Dates: []ScanVulnerabilityDate{
+							{
+								Type:  "disclosure",
+								Year:  1970,
+								Month: 01,
+								Day:   01,
+							},
+						},
+						Description:    "A VERY BAD EXPLOIT",
+						CheckResults:   []string{"INFO: checked a setting"},
+						ExploitResults: []string{"passwords: letmein"},
+						ExtraInfo:      []string{"OS: linux"},
+						References:     []string{"https://127.0.0.1/exploit-database/cve-1234"},
 					},
-					Description:    "A VERY BAD EXPLOIT",
-					CheckResults:   []string{"INFO: checked a setting"},
-					ExploitResults: []string{"passwords: letmein"},
-					ExtraInfo:      []string{"OS: linux"},
-					References:     []string{"https://127.0.0.1/exploit-database/cve-1234"},
 				},
 			},
 		},
@@ -273,10 +276,10 @@ func TestScanAsync(t *testing.T) {
 
 	s.EXPECT().Scan(ctx, in.Host).Return(nil, domain.MissingScanTargetError{Target: in.Host})
 	st.EXPECT().Set(ctx, id, gomock.Any()).Return(nil)
-	p.EXPECT().Produce(ctx, gomock.Any()).Return([]domain.Finding{}, nil)
+	p.EXPECT().Produce(ctx, gomock.Any()).Return(AsyncScanResult{}, nil)
 	f, err := h.Handle(ctx, in)
 	require.Nil(t, err)
-	require.Equal(t, []domain.Finding{}, f)
+	require.Equal(t, AsyncScanResult{}, f)
 
 	scripts := []string{"script1", "script2"}
 	args := []string{"arg1=v1", "arg2=v2"}
@@ -312,8 +315,8 @@ func TestScanAsync(t *testing.T) {
 
 	ss.EXPECT().ScanWithScripts(ctx, scripts, args, in.Host).Return(nil, domain.MissingScanTargetError{Target: in.Host})
 	st.EXPECT().Set(ctx, id, gomock.Any()).Return(nil)
-	p.EXPECT().Produce(ctx, gomock.Any()).Return([]domain.Finding{}, nil)
+	p.EXPECT().Produce(ctx, gomock.Any()).Return(AsyncScanResult{}, nil)
 	f, err = h.Handle(ctx, in)
 	require.Nil(t, err)
-	require.Equal(t, []domain.Finding{}, f)
+	require.Equal(t, AsyncScanResult{}, f)
 }

@@ -29,7 +29,7 @@ FROM asecurityteam/sdcli:v1 AS GOBUILDER
 RUN mkdir -p /go/src/github.com/asecurityteam/nmap-scaner
 WORKDIR /go/src/github.com/asecurityteam/nmap-scanner
 COPY --chown=sdcli:sdcli . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -o /opt/app main.go
+RUN GO111MODULE=on CGO_ENABLED=0 GOOS=linux go build -a -o /opt/app main.go
 
 ##################################
 
