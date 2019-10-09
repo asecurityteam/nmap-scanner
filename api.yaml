@@ -82,6 +82,7 @@ paths:
       x-transportd:
         backend: app
         enabled:
+          - "metrics"
           - "accesslog"
           - "requestvalidation"
           - "responsevalidation"
@@ -127,6 +128,7 @@ paths:
       x-transportd:
         backend: app
         enabled:
+          - "metrics"
           - "accesslog"
           - "requestvalidation"
           - "responsevalidation"
@@ -141,7 +143,7 @@ paths:
             #! else if eq .Response.Body.status "UNKNOWN" !#
             {"status":404}
             #! else if eq .Response.Body.status "READY" !#
-            {"status":200,"body": {"findings": #! json .Response.Body.findings !#}
+            {"status":200,"body": {"findings": #! json .Response.Body.findings !#}}
             #! end !#
           error: '{"status": 500, "bodyPassthrough": true}'
   /schedule:
@@ -169,6 +171,7 @@ paths:
       x-transportd:
         backend: app
         enabled:
+          - "metrics"
           - "accesslog"
           - "requestvalidation"
           - "responsevalidation"
@@ -179,6 +182,53 @@ paths:
           request: '#! json .Request.Body !#'
           success: '{"status": 200, "bodyPassthrough": true}'
           error: '{"status": 400, "bodyPassthrough": true}'
+  /scan/async:
+    post:
+      description: Scan a host that was scheduled for an async scan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AsyncScanRequest'
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncScanResult'
+        "404":
+          description: "Scan target not found."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "500":
+          description: "Internal server error"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      x-transportd:
+        backend: app
+        enabled:
+          - "metrics"
+          - "accesslog"
+          - "requestvalidation"
+          - "responsevalidation"
+          - "lambda"
+        lambda:
+          arn: "scanAsync"
+          async: false
+          request: '#! json .Request.Body !#'
+          success: '{"status": 200, "body": {"findings": #! json .Response.Body.findings !#}}'
+          error: >
+            #! if eq .Response.Body.errorType "NotFoundError" !#
+            {"status": 404, "bodyPassthrough": true}
+            #! else !#
+            {"status": 500, "bodyPassthrough": true}
+            #! end !#
 components:
   schemas:
     Finding:
@@ -352,6 +402,34 @@ components:
         href:
           type: string
           description: The URL to poll for status.
+    AsyncScanRequest:
+      type: object
+      required:
+        - host
+      properties:
+        host:
+          type: string
+          description: The hostname or IP to scan.
+        scripts:
+          type: array
+          items:
+            type: string
+          description: The full list of scripts to enable during the scan.
+        script_args:
+          type: array
+          items:
+            type: string
+          description: The full list of script arguments to pass.
+        id:
+          type: string
+          description: "A unique identifier for the scan results."
+    AsyncScanResult:
+      type: object
+      properties:
+        findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Finding'
     Error:
       type: object
       properties:
