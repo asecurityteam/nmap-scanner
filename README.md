@@ -1,7 +1,7 @@
 <a id="markdown-nmap-scanner" name="nmap-scanner"></a>
 # nmap-scanner
 [![GoDoc](https://godoc.org/github.com/asecurityteam/nmap-scanner?status.svg)](https://godoc.org/github.com/asecurityteam/nmap-scanner)
-[![Build Status](https://travis-ci.org/asecurityteam/nmap-scanner.png?branch=master)](https://travis-ci.org/asecurityteam/nmap-scanner)
+[![Build Status](https://travis-ci.com/asecurityteam/nmap-scanner.png?branch=master)](https://travis-ci.com/asecurityteam/nmap-scanner)
 [![codecov.io](https://codecov.io/github/asecurityteam/nmap-scanner/coverage.svg?branch=master)](https://codecov.io/github/asecurityteam/nmap-scanner?branch=master)
 
 A collection of custom nmap scripts and a service that executes them against
