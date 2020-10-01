@@ -140,7 +140,7 @@ func (c *component) New(ctx context.Context, conf *config) (func(context.Context
 func main() {
 	source, err := settings.NewEnvSource(os.Environ())
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 	ctx := context.Background()
 	runner := new(func(context.Context, settings.Source) error)
@@ -148,17 +148,16 @@ func main() {
 
 	fs := flag.NewFlagSet("nmap-scanner", flag.ContinueOnError)
 	fs.Usage = func() {}
-	if err = fs.Parse(os.Args[1:]); err == flag.ErrHelp {
+	if err := fs.Parse(os.Args[1:]); err == flag.ErrHelp {
 		g, _ := settings.GroupFromComponent(cmp)
 		fmt.Println("Usage: ")
 		fmt.Println(settings.ExampleEnvGroups([]settings.Group{g}))
 		return
 	}
-	err = settings.NewComponent(ctx, source, cmp, runner)
-	if err != nil {
-		panic(err.Error())
+	if err := settings.NewComponent(ctx, source, cmp, runner); err != nil {
+		panic(err)
 	}
 	if err := (*runner)(ctx, source); err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 }
